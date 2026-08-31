@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import {
   ShieldAlert, Activity, CheckCircle, AlertTriangle, RefreshCw,
   Zap, Sparkles, XCircle, TrendingUp, Bot, Clock, ChevronRight,
-  Database, DollarSign, Lock, X, Shield, BarChart3,
+  Database, DollarSign, Lock, X, Shield,
 } from 'lucide-react';
 import RiskDetailsModal from '@/components/RiskDetailsModal';
 
@@ -291,47 +291,38 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── Live Stats ──────────────────────────────────────────────────── */}
-        {stats && (
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-            {[
-              { label: 'Screened', value: stats.total_screened, icon: Activity,  color: 'text-slate-400', border: 'border-white/[0.07]', bg: 'bg-white/[0.02]' },
-              { label: 'Protected', value: fmt(stats.amount_protected), icon: DollarSign, color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]' },
-              { label: 'Auto-Blocked', value: stats.auto_blocked, icon: Shield,  color: 'text-red-400',    border: 'border-red-500/20', bg: 'bg-red-500/[0.04]' },
-              { label: 'Refunds', value: stats.refunds_issued, icon: RefreshCw,  color: 'text-blue-400',   border: 'border-blue-500/20', bg: 'bg-blue-500/[0.04]' },
-              { label: 'Detection', value: `${stats.detection_rate}%`, icon: TrendingUp, color: 'text-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/[0.04]' },
-              { label: 'Avg Score', value: stats.avg_risk_score, icon: BarChart3, color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/[0.04]' },
-            ].map(({ label, value, icon: Icon, color, border, bg }) => (
-              <div key={label} className={`rounded-2xl border ${border} ${bg} p-3.5 flex items-center gap-3 backdrop-blur-sm`}>
-                <Icon className={`h-4 w-4 flex-shrink-0 ${color}`} />
-                <div className="min-w-0">
-                  <p className={`text-sm font-black ${color} leading-none`}>{value}</p>
-                  <p className="text-[10px] text-slate-600 mt-0.5 truncate">{label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── KPI Cards ───────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* ── KPI + Stats — single unified row ───────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {/* Main KPIs — larger */}
           {[
-            { label: 'Pending Review', value: pending,  icon: ShieldAlert, c: 'text-amber-400',   b: 'border-amber-500/20',   bg: 'bg-amber-500/[0.05]',   desc: 'Needs decision' },
-            { label: 'Critical',       value: critical, icon: AlertTriangle, c: 'text-red-400',   b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Score ≥ 80' },
-            { label: 'Blocked',        value: blocked,  icon: XCircle,      c: 'text-red-300',    b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Halted' },
-            { label: 'Approved',       value: approved, icon: CheckCircle,  c: 'text-emerald-400',b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', desc: 'Cleared' },
-            { label: 'Avg Score',      value: avg,      icon: TrendingUp,   c: 'text-indigo-400', b: 'border-indigo-500/20',  bg: 'bg-indigo-500/[0.05]',  desc: `${cases.length} cases` },
+            { label: 'Pending Review', value: pending,  icon: ShieldAlert,   c: 'text-amber-400',   b: 'border-amber-500/20',   bg: 'bg-amber-500/[0.05]',   desc: 'Needs decision', large: true },
+            { label: 'Critical',       value: critical, icon: AlertTriangle, c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Score ≥ 80',    large: true },
+            { label: 'Blocked',        value: blocked,  icon: XCircle,       c: 'text-red-300',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Halted',        large: true },
+            { label: 'Approved',       value: approved, icon: CheckCircle,   c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', desc: 'Cleared',       large: true },
           ].map(({ label, value, icon: Icon, c, b, bg, desc }) => (
-            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 space-y-3 backdrop-blur-sm hover:bg-white/[0.04] transition`}>
+            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 space-y-2 backdrop-blur-sm hover:bg-white/[0.04] transition col-span-1`}>
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-slate-500 font-medium">{label}</p>
-                <Icon className={`h-4 w-4 ${c}`} />
+                <Icon className={`h-3.5 w-3.5 ${c}`} />
               </div>
               <p className={`text-3xl font-black ${c}`}>{value}</p>
-              <p className="text-[11px] text-slate-600">{desc}</p>
+              <p className="text-[10px] text-slate-600">{desc}</p>
             </div>
           ))}
-        </div>
+          {/* Compact live stats */}
+          {stats && [
+            { label: 'Protected', value: fmt(stats.amount_protected), icon: DollarSign, c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]' },
+            { label: 'Auto-Blocked', value: stats.auto_blocked, icon: Shield, c: 'text-red-400', b: 'border-red-500/20', bg: 'bg-red-500/[0.04]' },
+            { label: 'Refunds', value: stats.refunds_issued, icon: RefreshCw, c: 'text-blue-400', b: 'border-blue-500/20', bg: 'bg-blue-500/[0.04]' },
+          ].map(({ label, value, icon: Icon, c, b, bg }) => (
+            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 flex flex-col justify-between backdrop-blur-sm hover:bg-white/[0.04] transition`}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] text-slate-500 font-medium">{label}</p>
+                <Icon className={`h-3.5 w-3.5 ${c}`} />
+              </div>
+              <p className={`text-2xl font-black ${c}`}>{value}</p>
+            </div>
+          ))}</div>
 
         {/* ── Simulator ───────────────────────────────────────────────────── */}
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 backdrop-blur-sm">
@@ -466,25 +457,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ── Engine Footer ────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { icon: Bot,       label: 'AI Engine',       value: 'Gemini 1.5 Flash',       sub: 'Structured JSON output', c: 'text-indigo-400', b: 'border-indigo-500/20', bg: 'bg-indigo-500/[0.04]' },
-            { icon: Zap,       label: 'Risk Scoring',    value: '6-Signal Multi-Factor',  sub: 'Amount · Device · Geo · Status · Velocity · Currency', c: 'text-violet-400', b: 'border-violet-500/20', bg: 'bg-violet-500/[0.04]' },
-            { icon: DollarSign,label: 'Razorpay',        value: 'Auto-Refund on Block',   sub: 'Refund API integrated', c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]' },
-          ].map(({ icon: Icon, label, value, sub, c, b, bg }) => (
-            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 flex items-start gap-3 backdrop-blur-sm`}>
-              <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border ${b} ${bg}`}>
-                <Icon className={`h-4 w-4 ${c}`} />
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-wide">{label}</p>
-                <p className={`text-sm font-bold ${c} mt-0.5`}>{value}</p>
-                <p className="text-[11px] text-slate-600 mt-0.5">{sub}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* bottom padding */}
+        <div className="h-4" />
 
       </div>
 
