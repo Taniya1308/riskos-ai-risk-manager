@@ -252,10 +252,10 @@ export default function RiskDetailsModal({
   };
 
   const TABS = [
-    { id: 'investigation', label: 'AI Investigation', icon: Sparkles },
-    { id: 'signals',       label: 'Signal Breakdown', icon: Gauge },
-    { id: 'audit',         label: 'Audit Trail', icon: History },
-    { id: 'chat',          label: 'Ask AI', icon: Bot },
+    { id: 'investigation', label: 'AI Summary',       icon: Sparkles },
+    { id: 'signals',       label: 'Why Flagged?',     icon: Gauge },
+    { id: 'audit',         label: 'History',          icon: History },
+    { id: 'chat',          label: 'Ask AI',           icon: Bot },
   ] as const;
 
   return (
@@ -403,7 +403,8 @@ export default function RiskDetailsModal({
           {activeTab === 'signals' && (
             <div className="p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">6-Factor Risk Signal Breakdown</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">6-Factor Risk Analysis</p>
+                  <p className="text-[11px] text-slate-600 mt-0.5">Each factor is scored 0–100. Higher = more suspicious.</p>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <span>Composite:</span>
                   <span className={`font-bold ${severityColors.text}`}>{riskScore}/100</span>
@@ -539,9 +540,9 @@ export default function RiskDetailsModal({
                       </div>
                       <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-sm p-3 max-w-xs">
                         <p className="text-sm text-slate-200">
-                          I&apos;m RISKOS AI, your fraud analyst assistant. I have full context on this case.
+                          Hi! I&apos;m the RISKOS AI analyst. I&apos;ve reviewed this payment in detail.
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">What would you like to know?</p>
+                        <p className="text-xs text-slate-500 mt-1">Ask me anything about this case — I&apos;ll give you a straight answer.</p>
                       </div>
                     </div>
                     {/* Suggested prompts */}
@@ -613,7 +614,7 @@ export default function RiskDetailsModal({
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Ask about this case…"
+                    placeholder="e.g. Is this payment safe? Should I block it?"
                     className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition"
                     disabled={chatLoading}
                   />
@@ -633,31 +634,34 @@ export default function RiskDetailsModal({
         {/* ── Footer Actions ─────────────────────────────────────────────── */}
         {caseData.status === 'new' || !caseData.status ? (
           <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex-shrink-0">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold mb-3">Analyst Decision</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold mb-3">What do you want to do?</p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => handleAction('escalated')}
                 disabled={isProcessing}
-                className="flex items-center justify-center gap-2 rounded-xl border border-purple-700/50 bg-purple-500/10 px-3 py-2.5 text-xs font-semibold text-purple-400 hover:bg-purple-500/20 disabled:opacity-50 transition"
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-purple-700/50 bg-purple-500/10 px-3 py-3 text-xs font-semibold text-purple-400 hover:bg-purple-500/20 disabled:opacity-50 transition"
               >
                 <AlertTriangle className="h-4 w-4" />
-                Escalate
+                <span>Escalate</span>
+                <span className="text-[9px] opacity-60 font-normal">Send to senior</span>
               </button>
               <button
                 onClick={() => handleAction('blocked')}
                 disabled={isProcessing}
-                className="flex items-center justify-center gap-2 rounded-xl border border-red-700/50 bg-red-500/10 px-3 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition"
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-red-700/50 bg-red-500/10 px-3 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition"
               >
                 <XCircle className="h-4 w-4" />
-                Block
+                <span>Block + Refund</span>
+                <span className="text-[9px] opacity-60 font-normal">Stop & refund</span>
               </button>
               <button
                 onClick={() => handleAction('approved')}
                 disabled={isProcessing}
-                className="flex items-center justify-center gap-2 rounded-xl border border-emerald-700/50 bg-emerald-500/10 px-3 py-2.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition"
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-emerald-700/50 bg-emerald-500/10 px-3 py-3 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Approve
+                <span>Approve</span>
+                <span className="text-[9px] opacity-60 font-normal">Looks safe</span>
               </button>
             </div>
           </div>
@@ -665,7 +669,7 @@ export default function RiskDetailsModal({
           <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex-shrink-0">
             <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
               <Lock className="h-4 w-4" />
-              Decision recorded — case is {caseData.status as string}
+              This payment has been {caseData.status as string} — no further action needed
             </div>
           </div>
         )}

@@ -258,7 +258,7 @@ export default function Dashboard() {
                 {source === 'supabase' ? 'Supabase Realtime' : 'In-Memory'}
               </span>
             </div>
-            <p className="text-sm text-slate-500 mt-1">Autonomous risk ops · 6-signal AI · Auto-block · Razorpay refunds</p>
+            <p className="text-sm text-slate-500 mt-1">AI-powered fraud detection for Razorpay payments · auto-blocks threats · issues refunds automatically</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <Clock className="h-3.5 w-3.5" />
@@ -270,7 +270,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Health Bar ──────────────────────────────────────────────────── */}
+        {/* ── Welcome Banner (shown when cases exist) ─────────────────────── */}
+        {!loading && cases.length > 0 && (
+          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.04] px-5 py-4 flex items-start gap-4 backdrop-blur-sm">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 border border-indigo-500/30 mt-0.5">
+              <Bot className="h-5 w-5 text-indigo-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-200">How to use this dashboard</p>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Every payment from Razorpay is automatically scored for fraud risk.
+                <span className="text-amber-400 font-semibold"> Click any case</span> to see the full AI investigation, risk breakdown, and take action.
+                Cases scoring ≥ 85 are <span className="text-red-400 font-semibold">auto-blocked instantly</span> — no action needed from you.
+              </p>
+            </div>
+            <div className="hidden sm:flex flex-col gap-1 flex-shrink-0 text-[11px] text-slate-500">
+              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Review = needs your decision</span>
+              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Auto = already blocked by AI</span>
+              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Approved = safe to process</span>
+            </div>
+          </div>
+        )}
         {health && (
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-3 flex items-center flex-wrap gap-4 backdrop-blur-sm">
             <div className="flex items-center gap-2">
@@ -295,10 +315,10 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {/* Main KPIs — larger */}
           {[
-            { label: 'Pending Review', value: pending,  icon: ShieldAlert,   c: 'text-amber-400',   b: 'border-amber-500/20',   bg: 'bg-amber-500/[0.05]',   desc: 'Needs decision', large: true },
-            { label: 'Critical',       value: critical, icon: AlertTriangle, c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Score ≥ 80',    large: true },
-            { label: 'Blocked',        value: blocked,  icon: XCircle,       c: 'text-red-300',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Halted',        large: true },
-            { label: 'Approved',       value: approved, icon: CheckCircle,   c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', desc: 'Cleared',       large: true },
+            { label: 'Need Your Review', value: pending,  icon: ShieldAlert,   c: 'text-amber-400',   b: 'border-amber-500/20',   bg: 'bg-amber-500/[0.05]',   desc: 'Waiting for your decision' },
+            { label: 'High Risk',        value: critical, icon: AlertTriangle, c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Very suspicious payments' },
+            { label: 'Blocked',          value: blocked,  icon: XCircle,       c: 'text-red-300',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Payments stopped' },
+            { label: 'Approved',         value: approved, icon: CheckCircle,   c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', desc: 'Safe, cleared payments' },
           ].map(({ label, value, icon: Icon, c, b, bg, desc }) => (
             <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 space-y-2 backdrop-blur-sm hover:bg-white/[0.04] transition col-span-1`}>
               <div className="flex items-center justify-between">
@@ -311,9 +331,9 @@ export default function Dashboard() {
           ))}
           {/* Compact live stats */}
           {stats && [
-            { label: 'Protected', value: fmt(stats.amount_protected), icon: DollarSign, c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]' },
-            { label: 'Auto-Blocked', value: stats.auto_blocked, icon: Shield, c: 'text-red-400', b: 'border-red-500/20', bg: 'bg-red-500/[0.04]' },
-            { label: 'Refunds', value: stats.refunds_issued, icon: RefreshCw, c: 'text-blue-400', b: 'border-blue-500/20', bg: 'bg-blue-500/[0.04]' },
+            { label: 'Money Protected', value: fmt(stats.amount_protected), icon: DollarSign, c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]' },
+            { label: 'Auto-Blocked',    value: stats.auto_blocked,           icon: Shield,     c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.04]' },
+            { label: 'Refunds Issued',  value: stats.refunds_issued,         icon: RefreshCw,  c: 'text-blue-400',    b: 'border-blue-500/20',    bg: 'bg-blue-500/[0.04]' },
           ].map(({ label, value, icon: Icon, c, b, bg }) => (
             <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 flex flex-col justify-between backdrop-blur-sm hover:bg-white/[0.04] transition`}>
               <div className="flex items-center justify-between mb-2">
@@ -331,16 +351,16 @@ export default function Dashboard() {
               <Zap className="h-4 w-4 text-indigo-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-200">Simulate Razorpay Webhook</p>
-              <p className="text-[11px] text-slate-500">Inject a live payment event for demo</p>
+              <p className="text-sm font-bold text-slate-200">Try a Live Payment Demo</p>
+              <p className="text-[11px] text-slate-500">Click any button below to simulate a real Razorpay payment and watch RISKOS react instantly</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {[
-              { type: 'high_risk' as const,   label: '🔴 Critical  ₹1,85,000 + Tor',     sub: 'auto-blocks',  c: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/50' },
-              { type: 'medium_risk' as const, label: '🟠 High  ₹75,000 + VPN',            sub: 'review',       c: 'border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50' },
-              { type: 'failed' as const,      label: '⚠️ Failed  ₹45,000',               sub: 'failed',       c: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500/50' },
-              { type: 'low_risk' as const,    label: '🟢 Normal  ₹12,000',               sub: 'approve',      c: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50' },
+              { type: 'high_risk' as const,   label: '🔴 Suspicious Payment  ₹1,85,000',  sub: 'watch it auto-block',   c: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/50' },
+              { type: 'medium_risk' as const, label: '🟠 High Risk Payment  ₹75,000',      sub: 'needs your review',      c: 'border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50' },
+              { type: 'failed' as const,      label: '⚠️ Failed Payment  ₹45,000',         sub: 'fraud signal',           c: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500/50' },
+              { type: 'low_risk' as const,    label: '🟢 Normal Payment  ₹12,000',         sub: 'safe, will approve',     c: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50' },
             ].map(({ type, label, sub, c }) => (
               <button key={type} onClick={() => simulate(type)} disabled={simulating}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${c}`}>
@@ -352,8 +372,8 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-slate-700 mt-3">
-            💡 Critical Risk scores ≥85 triggers auto-block engine + Razorpay refund instantly.
+          <p className="text-[11px] text-slate-600 mt-3">
+            💡 The red button simulates a payment from a Tor exit node — RISKOS will block it and issue a refund automatically, no action needed from you.
           </p>
         </div>
 
@@ -366,8 +386,8 @@ export default function Dashboard() {
                 <Activity className="h-4 w-4 text-indigo-400" />
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-200">Risk Case Queue</p>
-                <p className="text-[11px] text-slate-500">{cases.length} cases total</p>
+                <p className="text-sm font-bold text-slate-200">Flagged Payments</p>
+                <p className="text-[11px] text-slate-500">{cases.length} payments reviewed · click any row to investigate</p>
               </div>
             </div>
             {pending > 0 && (
@@ -384,12 +404,21 @@ export default function Dashboard() {
               <span className="text-sm text-slate-500">Loading risk cases…</span>
             </div>
           ) : cases.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-20">
+            <div className="flex flex-col items-center justify-center gap-4 py-20 px-6 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
                 <ShieldAlert className="h-8 w-8 text-slate-700" />
               </div>
-              <p className="text-sm text-slate-500">No risk cases yet</p>
-              <p className="text-xs text-slate-700">Use the simulator above to inject a payment event</p>
+              <div>
+                <p className="text-sm font-semibold text-slate-400">No payments reviewed yet</p>
+                <p className="text-xs text-slate-600 mt-1">Use the demo buttons above to simulate a payment and see RISKOS in action</p>
+              </div>
+              <button
+                onClick={() => simulate('high_risk')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-xs font-bold transition"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Try a suspicious payment demo
+              </button>
             </div>
           ) : (
             <div className="divide-y divide-white/[0.04]">
@@ -448,6 +477,7 @@ export default function Dashboard() {
 
                     <div className="flex-shrink-0 flex items-center gap-2 text-slate-700">
                       <span className="hidden md:inline text-xs">{timeAgo(c.created_at)}</span>
+                      <span className="hidden lg:inline text-[10px] text-slate-700 group-hover:text-indigo-400 transition font-medium">Investigate →</span>
                       <ChevronRight className="h-4 w-4 group-hover:text-slate-400 transition" />
                     </div>
                   </div>
