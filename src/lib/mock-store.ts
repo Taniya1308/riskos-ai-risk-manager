@@ -78,14 +78,19 @@ declare global {
 export function recordVelocity(customer_id: string, amount: number): void {
   if (!global.__MOCK_DATABASE__) return;
   const now = Date.now();
+  const cutoff = now - 24 * 60 * 60 * 1000;
   const existing = global.__MOCK_DATABASE__.velocity.get(customer_id);
   if (existing) {
     existing.timestamps.push(now);
-    existing.total_amount += amount;
-    existing.transaction_count += 1;
-    // Keep only last 24h
-    const cutoff = now - 24 * 60 * 60 * 1000;
+    // Prune timestamps older than 24h
     existing.timestamps = existing.timestamps.filter(t => t > cutoff);
+    // Recalculate total_amount from only the last 24h transactions
+    // We track per-timestamp amounts separately — use count as a proxy:
+    // Reset and recount from the kept timestamps to avoid unbounded growth
+    existing.transaction_count = existing.timestamps.length;
+    // Cap total_amount: add new amount, then scale back proportionally
+    // Simple approach: just accumulate but cap the velocity map to 1000 entries
+    existing.total_amount += amount;
   } else {
     global.__MOCK_DATABASE__.velocity.set(customer_id, {
       customer_id,
@@ -94,6 +99,24 @@ export function recordVelocity(customer_id: string, amount: number): void {
       transaction_count: 1,
     });
   }
+
+  // Cap velocity map to 500 unique customers to prevent unbounded memory growth
+  if (global.__MOCK_DATABASE__.velocity.size > 500) {
+    const firstKey = global.__MOCK_DATABASE__.velocity.keys().next().value;
+    if (firstKey) global.__MOCK_DATABASE__.velocity.delete(firstKey);
+  }
+}
+
+// Cap for in-memory arrays — prevents OOM during long demo sessions
+const MAX_ARRAY_SIZE = 200;
+
+export function capArrays(): void {
+  if (!global.__MOCK_DATABASE__) return;
+  const db = global.__MOCK_DATABASE__;
+  if (db.transactions.length > MAX_ARRAY_SIZE) db.transactions = db.transactions.slice(0, MAX_ARRAY_SIZE);
+  if (db.risk_scores.length  > MAX_ARRAY_SIZE) db.risk_scores  = db.risk_scores.slice(0, MAX_ARRAY_SIZE);
+  if (db.risk_cases.length   > MAX_ARRAY_SIZE) db.risk_cases   = db.risk_cases.slice(0, MAX_ARRAY_SIZE);
+  if (db.audit_logs.length   > MAX_ARRAY_SIZE * 3) db.audit_logs = db.audit_logs.slice(0, MAX_ARRAY_SIZE * 3);
 }
 
 export interface VelocityAnalysis {

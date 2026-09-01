@@ -8,8 +8,9 @@ import { NextResponse } from 'next/server';
 import { mockDb } from '@/lib/mock-store';
 
 export async function GET() {
-  const cases = mockDb.risk_cases;
-  const transactions = mockDb.transactions;
+  try {
+    const cases = mockDb.risk_cases;
+    const transactions = mockDb.transactions;
 
   // ── Severity breakdown ────────────────────────────────────────────────
   const severityBreakdown = {
@@ -125,4 +126,9 @@ export async function GET() {
     amount_ranges: amountRanges,
     daily_trend: dailyTrend,
   });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Analytics failed';
+    console.error('[RISKOS] Analytics error:', err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

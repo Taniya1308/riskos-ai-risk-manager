@@ -210,17 +210,21 @@ export default function Dashboard() {
   }, [fetchCases, fetchStats]);
 
   async function handleDecision(caseId: string, decision: 'approved' | 'blocked' | 'escalated') {
-    const r = await fetch('/api/cases', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ caseId, decision, actor: 'Analyst_Current' }),
-    });
-    const d = await r.json();
-    if (decision === 'blocked' && d.refund) {
-      toast(d.refund.success
-        ? { type: 'success', title: '✅ Refund Issued', message: `${d.refund.refund_id} processed${d.refund.simulated ? ' (simulated)' : ''}.` }
-        : { type: 'warning', title: '⚠️ Refund Failed', message: d.refund.error || 'Unknown error' });
+    try {
+      const r = await fetch('/api/cases', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseId, decision, actor: 'Analyst_Current' }),
+      });
+      const d = await r.json();
+      if (decision === 'blocked' && d.refund) {
+        toast(d.refund.success
+          ? { type: 'success', title: '✅ Refund Issued', message: `${d.refund.refund_id} processed${d.refund.simulated ? ' (simulated)' : ''}.` }
+          : { type: 'warning', title: '⚠️ Refund Failed', message: d.refund.error || 'Unknown error' });
+      }
+      await fetchCases(false); await fetchStats();
+    } catch {
+      toast({ type: 'warning', title: 'Action failed', message: 'Could not record decision. Please try again.' });
     }
-    await fetchCases(false); await fetchStats();
   }
 
   async function simulate(type: 'high_risk' | 'medium_risk' | 'low_risk' | 'failed') {
@@ -264,7 +268,8 @@ export default function Dashboard() {
         body: JSON.stringify({ caseIds: Array.from(selectedIds), decision, actor: 'Analyst_Current' }),
       });
       const d = await res.json();
-      toast({ type: 'success', title: `✅ Bulk ${decision}`, message: `${d.processed} payment${d.processed !== 1 ? 's' : ''} ${decision}.` });
+      const processed = typeof d.processed === 'number' ? d.processed : selectedIds.size;
+      toast({ type: 'success', title: `✅ Bulk ${decision}`, message: `${processed} payment${processed !== 1 ? 's' : ''} ${decision}.` });
       setSelectedIds(new Set()); await fetchCases(false); await fetchStats();
     } catch { toast({ type: 'warning', title: 'Bulk action failed', message: 'Please try again.' }); }
     finally { setBulkLoading(false); }

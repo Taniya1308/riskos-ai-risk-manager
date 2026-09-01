@@ -145,6 +145,7 @@ export default function RiskDetailsModal({
   const [notes, setNotes] = useState<{ id: string; author: string; text: string; created_at: string }[]>([]);
   const [noteInput, setNoteInput] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState('');
 
   // Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -497,18 +498,24 @@ export default function RiskDetailsModal({
                   onClick={async () => {
                     if (!noteInput.trim()) return;
                     setSavingNote(true);
+                    setNoteError('');
                     try {
                       const res = await fetch('/api/cases/notes', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ caseId: caseData.id, note: noteInput, author: 'Analyst_Current' }),
                       });
+                      if (!res.ok) throw new Error('Server error');
                       const d = await res.json();
                       if (d.note) {
                         setNotes(prev => [...prev, d.note]);
                         setNoteInput('');
+                      } else {
+                        setNoteError('Failed to save note. Please try again.');
                       }
-                    } catch { /* silent */ }
+                    } catch {
+                      setNoteError('Failed to save note. Please try again.');
+                    }
                     finally { setSavingNote(false); }
                   }}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition"
@@ -516,6 +523,9 @@ export default function RiskDetailsModal({
                   <Plus className="h-3.5 w-3.5" />
                   {savingNote ? 'Saving…' : 'Add Note'}
                 </button>
+                {noteError && (
+                  <p className="text-xs text-red-400 mt-1">{noteError}</p>
+                )}
               </div>
 
               {/* Notes list */}

@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { runAIInvestigation } from '@/lib/ai-investigation';
 import { runRiskEngine, TransactionInput } from '@/lib/risk-engine';
-import { mockDb, MockTransaction, MockRiskScore, MockRiskCase, MockAuditLog, recordVelocity } from '@/lib/mock-store';
+import { mockDb, MockTransaction, MockRiskScore, MockRiskCase, MockAuditLog, recordVelocity, capArrays } from '@/lib/mock-store';
 import { refundPayment } from '@/lib/razorpay-client';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
@@ -60,18 +60,24 @@ export async function POST(req: Request) {
       status: 'captured',
     };
 
-    const parsedAmount = ((paymentEntity.amount as number) || 0) / 100;
-    const paymentId = (paymentEntity.id as string) || `pay_${Date.now()}`;
+    // Safe amount parsing — guard against non-numeric input
+    const rawAmount = paymentEntity.amount;
+    const numericAmount = typeof rawAmount === 'number' ? rawAmount : Number(rawAmount);
+    const parsedAmount = isNaN(numericAmount) ? 0 : numericAmount / 100;
+
+    const paymentId  = (paymentEntity.id as string) || `pay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const customerId = (paymentEntity.customer_id as string) || 'cust_anonymous';
-    const currency = (paymentEntity.currency as string) || 'INR';
-    const status = (paymentEntity.status as string) || 'captured';
-    const notes = (paymentEntity.notes as Record<string, string>) || {};
-    const deviceId = notes.device_id || 'device_unknown';
+    const currency   = (paymentEntity.currency as string) || 'INR';
+    const status     = (paymentEntity.status as string) || 'captured';
+    const notes      = (paymentEntity.notes as Record<string, string>) || {};
+    const deviceId   = notes.device_id || 'device_unknown';
     const locationId = notes.location_id || 'unknown';
 
-    let txnId = `txn_${Date.now()}`;
-    let riskScoreId = `score_${Date.now()}`;
-    let caseId = `case_${Date.now()}`;
+    // Use crypto-random suffix to avoid Date.now() collisions under concurrent requests
+    const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    let txnId      = `txn_${uid()}`;
+    let riskScoreId = `score_${uid()}`;
+    let caseId     = `case_${uid()}`;
 
     // ── 3. Record Velocity (real time-window tracking) ─────────────────────
     recordVelocity(customerId, parsedAmount);
@@ -246,6 +252,9 @@ export async function POST(req: Request) {
         }
       }
     }
+
+    // Cap in-memory arrays to prevent OOM during long demo sessions
+    capArrays();
 
     return NextResponse.json({
       status: 'ok',

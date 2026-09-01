@@ -295,8 +295,10 @@ export function runRiskEngine(txn: TransactionInput, eventType?: string): RiskEn
   const triggered_rules: string[] = [];
   if (txn.amount > 50000) triggered_rules.push('RULE_HIGH_AMOUNT');
   if (txn.status === 'failed') triggered_rules.push('RULE_PAYMENT_FAILED');
-  if (signals.find(s => s.label === 'Device Integrity')!.score >= 70) triggered_rules.push('RULE_SUSPICIOUS_DEVICE');
-  if (signals.find(s => s.label === 'Geo / IP Variance')!.score >= 70) triggered_rules.push('RULE_HIGH_RISK_GEO');
+  const deviceSignal = signals.find(s => s.label === 'Device Integrity');
+  const geoSignal    = signals.find(s => s.label === 'Geo / IP Variance');
+  if (deviceSignal && deviceSignal.score >= 70) triggered_rules.push('RULE_SUSPICIOUS_DEVICE');
+  if (geoSignal    && geoSignal.score    >= 70) triggered_rules.push('RULE_HIGH_RISK_GEO');
   if (composite_score >= 80) triggered_rules.push('RULE_COMPOSITE_CRITICAL');
 
   return { composite_score, severity, signals, triggered_rules, recommended_action };
