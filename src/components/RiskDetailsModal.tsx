@@ -222,6 +222,8 @@ export default function RiskDetailsModal({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  if (!isOpen || !caseData) return null;
+
   const txn = (caseData.transactions as Record<string, unknown>) || {};
   const score = (caseData.risk_scores as Record<string, unknown>) || {};
   const riskScore = (score.score as number) ?? 50;

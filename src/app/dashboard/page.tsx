@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   ShieldAlert, Activity, CheckCircle, AlertTriangle, RefreshCw,
-  Zap, Sparkles, XCircle, Clock, ChevronRight,
+  Zap, Sparkles, XCircle, Bot, Clock, ChevronRight,
   DollarSign, Lock, X, Search, Filter,
   Download, CheckSquare, Square,
 } from 'lucide-react';
