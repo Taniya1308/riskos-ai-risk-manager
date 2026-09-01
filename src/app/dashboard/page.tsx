@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   ShieldAlert, Activity, CheckCircle, AlertTriangle, RefreshCw,
-  Zap, Sparkles, XCircle, TrendingUp, Bot, Clock, ChevronRight,
-  Database, DollarSign, Lock, X, Shield, Search, Filter,
-  Download, CheckSquare, Square, BarChart3, Settings,
+  Zap, Sparkles, XCircle, Clock, ChevronRight,
+  DollarSign, Lock, X, Search, Filter,
+  Download, CheckSquare, Square,
 } from 'lucide-react';
 import RiskDetailsModal from '@/components/RiskDetailsModal';
 
@@ -147,7 +147,6 @@ export default function Dashboard() {
   const [loading,     setLoading]     = useState(true);
   const [simulating,  setSimulating]  = useState(false);
   const [simType,     setSimType]     = useState<string | null>(null);
-  const [source,      setSource]      = useState<'supabase' | 'mock'>('mock');
   const [refreshed,   setRefreshed]   = useState(new Date());
   const [stats,       setStats]       = useState<Stats | null>(null);
   const [health,      setHealth]      = useState<HealthData | null>(null);
@@ -184,7 +183,6 @@ export default function Dashboard() {
       const d = await r.json();
       if (d.cases) {
         setCases(d.cases);
-        setSource(d.source || 'mock');
         setRefreshed(new Date());
         if (notify && d.cases.length > prevCount.current) {
           const c = d.cases[0];
@@ -285,12 +283,10 @@ export default function Dashboard() {
     window.open(`/api/cases/export?${p.toString()}`, '_blank');
   }
 
-  // Derived counts
   const pending  = cases.filter(c => !c.status || c.status === 'new').length;
   const critical = cases.filter(c => c.risk_scores?.severity === 'critical').length;
   const blocked  = cases.filter(c => c.status === 'blocked').length;
   const approved = cases.filter(c => c.status === 'approved').length;
-  const avg      = cases.length ? Math.round(cases.reduce((s, c) => s + (c.risk_scores?.score || 0), 0) / cases.length) : 0;
 
   return (
     <div className="min-h-screen text-slate-100 font-sans">
@@ -305,20 +301,11 @@ export default function Dashboard() {
         {/* ── Page Header ─────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-xl font-black tracking-tight font-mono">
-                RISK<span className="text-indigo-400">OS</span>
-                <span className="text-slate-600"> //</span>
-                <span className="text-slate-300"> Command Center</span>
-              </h1>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">v3.0</span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono text-slate-500 bg-white/[0.03] border border-white/[0.07] flex items-center gap-1">
-                <Database className="h-2.5 w-2.5" />
-                {source === 'supabase' ? 'Supabase Realtime' : 'In-Memory'}
-              </span>
-            </div>
-            <p className="text-sm text-slate-500 mt-1">
-              AI-powered fraud detection for Razorpay payments · auto-blocks threats · issues refunds automatically
+            <h1 className="text-xl font-black tracking-tight font-mono text-white">
+              Command Center
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              AI-powered fraud detection · auto-blocks threats · issues refunds automatically
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-600">
@@ -328,33 +315,12 @@ export default function Dashboard() {
               onClick={() => { fetchCases(false); fetchStats(); }}
               disabled={loading}
               className="ml-1 p-1.5 rounded-lg hover:bg-white/[0.05] transition text-slate-500 hover:text-slate-300"
+              aria-label="Refresh"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
-
-        {/* ── How-to guide (shown when cases exist) ───────────────────────── */}
-        {!loading && cases.length > 0 && (
-          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.04] px-5 py-4 flex items-start gap-4 backdrop-blur-sm">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 border border-indigo-500/30 mt-0.5">
-              <Bot className="h-5 w-5 text-indigo-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-200">How to use this dashboard</p>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Every payment from Razorpay is automatically scored for fraud risk.
-                <span className="text-amber-400 font-semibold"> Click any case</span> to see the full AI investigation, risk breakdown, and take action.
-                Cases scoring ≥ 85 are <span className="text-red-400 font-semibold">auto-blocked instantly</span> — no action needed from you.
-              </p>
-            </div>
-            <div className="hidden sm:flex flex-col gap-1 flex-shrink-0 text-[11px] text-slate-500">
-              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Review = needs your decision</span>
-              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Auto = already blocked by AI</span>
-              <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Approved = safe to process</span>
-            </div>
-          </div>
-        )}
 
         {/* ── System Health ────────────────────────────────────────────────── */}
         {health && (
@@ -377,13 +343,13 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── KPI + Live Stats ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        {/* ── KPI Cards ────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
           {[
-            { label: 'Need Your Review', value: pending,  icon: ShieldAlert,   c: 'text-amber-400',   b: 'border-amber-500/20',   bg: 'bg-amber-500/[0.05]',   desc: 'Waiting for your decision' },
-            { label: 'High Risk',        value: critical, icon: AlertTriangle, c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Very suspicious payments' },
-            { label: 'Blocked',          value: blocked,  icon: XCircle,       c: 'text-red-300',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Payments stopped' },
-            { label: 'Approved',         value: approved, icon: CheckCircle,   c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', desc: 'Safe, cleared payments' },
+            { label: 'Pending Review', value: pending,  icon: ShieldAlert,   c: 'text-amber-400',   b: 'border-amber-500/20',   bg: 'bg-amber-500/[0.05]',   desc: 'Needs your decision' },
+            { label: 'High Risk',      value: critical, icon: AlertTriangle, c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Score ≥ 80' },
+            { label: 'Blocked',        value: blocked,  icon: XCircle,       c: 'text-red-300',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Payments stopped' },
+            { label: 'Approved',       value: approved, icon: CheckCircle,   c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', desc: 'Cleared payments' },
           ].map(({ label, value, icon: Icon, c, b, bg, desc }) => (
             <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 space-y-2 backdrop-blur-sm hover:bg-white/[0.04] transition`}>
               <div className="flex items-center justify-between">
@@ -395,16 +361,16 @@ export default function Dashboard() {
             </div>
           ))}
           {stats && [
-            { label: 'Money Protected', value: fmt(stats.amount_protected), icon: DollarSign, c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]' },
-            { label: 'Auto-Blocked',    value: stats.auto_blocked,           icon: Shield,     c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.04]' },
-            { label: 'Refunds Issued',  value: stats.refunds_issued,         icon: RefreshCw,  c: 'text-blue-400',    b: 'border-blue-500/20',    bg: 'bg-blue-500/[0.04]' },
-          ].map(({ label, value, icon: Icon, c, b, bg }) => (
-            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 flex flex-col justify-between backdrop-blur-sm hover:bg-white/[0.04] transition`}>
-              <div className="flex items-center justify-between mb-2">
+            { label: 'Money Protected', value: fmt(stats.amount_protected), icon: DollarSign, c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]', desc: 'Blocked before processing' },
+            { label: 'Refunds Issued',  value: stats.refunds_issued,         icon: RefreshCw,  c: 'text-blue-400',    b: 'border-blue-500/20',    bg: 'bg-blue-500/[0.04]',    desc: 'Auto + manual' },
+          ].map(({ label, value, icon: Icon, c, b, bg, desc }) => (
+            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 space-y-2 backdrop-blur-sm hover:bg-white/[0.04] transition`}>
+              <div className="flex items-center justify-between">
                 <p className="text-[11px] text-slate-500 font-medium">{label}</p>
                 <Icon className={`h-3.5 w-3.5 ${c}`} />
               </div>
-              <p className={`text-2xl font-black ${c}`}>{value}</p>
+              <p className={`text-3xl font-black ${c}`}>{value}</p>
+              <p className="text-[10px] text-slate-600">{desc}</p>
             </div>
           ))}
         </div>
@@ -656,10 +622,9 @@ export default function Dashboard() {
                     </div>
 
                     {/* Time + arrow */}
-                    <div className="flex-shrink-0 flex items-center gap-2 text-slate-700 cursor-pointer"
+                    <div className="flex-shrink-0 flex items-center gap-2 text-slate-600 cursor-pointer"
                       onClick={() => { setSelected(c); setModalOpen(true); }}>
                       <span className="hidden md:inline text-xs">{timeAgo(c.created_at)}</span>
-                      <span className="hidden lg:inline text-[10px] group-hover:text-indigo-400 transition font-medium">Investigate →</span>
                       <ChevronRight className="h-4 w-4 group-hover:text-slate-400 transition" />
                     </div>
                   </div>
@@ -669,33 +634,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ── Quick Links ──────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <a href="/analytics"
-            className="flex items-center gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] p-4 hover:bg-violet-500/[0.08] transition group">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-violet-500/25 bg-violet-500/15">
-              <BarChart3 className="h-4 w-4 text-violet-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-slate-200">View Analytics</p>
-              <p className="text-[11px] text-slate-500">Fraud trends, top risk locations, score distribution</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-violet-400 transition" />
-          </a>
-          <a href="/rules"
-            className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 hover:bg-amber-500/[0.08] transition group">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/15">
-              <Settings className="h-4 w-4 text-amber-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-slate-200">Configure Rules</p>
-              <p className="text-[11px] text-slate-500">Set thresholds, signal weights, alert rules</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-amber-400 transition" />
-          </a>
-        </div>
-
-        <div className="h-4" />
+        <div className="pb-4" />
       </div>
 
       <RiskDetailsModal

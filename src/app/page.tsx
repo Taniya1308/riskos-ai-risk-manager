@@ -28,12 +28,12 @@ export default function Home() {
         </div>
 
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-400 mb-8 backdrop-blur-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/[0.06] px-4 py-1.5 text-xs font-semibold text-indigo-400 mb-8">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-60" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-400" />
           </span>
-          Razorpay AI Builder · Track 2: AI Risk Manager
+          AI-powered payment risk operations for Razorpay merchants
         </div>
 
         {/* Headline */}
@@ -58,18 +58,9 @@ export default function Home() {
             className="group flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-6 py-3 text-sm font-bold text-white shadow-2xl shadow-indigo-600/30 transition-all hover:shadow-indigo-500/50 hover:scale-105"
           >
             <LayoutDashboard className="h-4 w-4" />
-            Launch Command Center
+            Open Dashboard
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
-          <a
-            href="https://aistudio.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.07] px-6 py-3 text-sm font-semibold text-slate-300 transition-all hover:text-white backdrop-blur-sm"
-          >
-            <Sparkles className="h-4 w-4 text-violet-400" />
-            Get Free Gemini Key
-          </a>
         </div>
 
         {/* Stats row */}
@@ -102,20 +93,17 @@ export default function Home() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { step: '01', title: 'Webhook Intake', desc: 'Razorpay fires payment.authorized or payment.failed. RISKOS verifies the HMAC-SHA256 signature and extracts the full payment entity.', icon: Zap, color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/[0.05]', glow: 'hover:border-blue-500/40 hover:bg-blue-500/10' },
+            { step: '01', title: 'Webhook Intake', desc: 'Razorpay fires payment.authorized or payment.failed. RISKOS verifies the signature and extracts the full payment entity.', icon: Zap, color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/[0.05]', glow: 'hover:border-blue-500/40 hover:bg-blue-500/10' },
             { step: '02', title: '6-Signal Risk Engine', desc: 'Amount, device fingerprint, geo/IP, payment status, velocity, and currency — each scored 0–100 and weighted into a composite score.', icon: Gauge, color: 'text-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/[0.05]', glow: 'hover:border-purple-500/40 hover:bg-purple-500/10' },
             { step: '03', title: 'Gemini AI Investigation', desc: 'Gemini 1.5 Flash receives full signal context and returns a plain-English fraud explanation, key factors, confidence rating, and recommendation.', icon: Sparkles, color: 'text-indigo-400', border: 'border-indigo-500/20', bg: 'bg-indigo-500/[0.05]', glow: 'hover:border-indigo-500/40 hover:bg-indigo-500/10' },
             { step: '04', title: 'Auto-Block Engine', desc: 'Cases scoring ≥85 are instantly blocked. RISKOS calls the Razorpay Refund API immediately and writes a complete audit entry — no human needed.', icon: Shield, color: 'text-red-400', border: 'border-red-500/20', bg: 'bg-red-500/[0.05]', glow: 'hover:border-red-500/40 hover:bg-red-500/10' },
             { step: '05', title: 'Human-in-the-Loop', desc: 'Medium-risk cases queue for analyst review. Analysts can Approve, Block, or Escalate — and chat live with the AI for case-specific answers.', icon: Bot, color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/[0.05]', glow: 'hover:border-amber-500/40 hover:bg-amber-500/10' },
             { step: '06', title: 'Immutable Audit Trail', desc: 'Every action — automated or human — is permanently recorded: score, signals, AI reasoning, refund ID, analyst identity, and timestamp.', icon: History, color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', glow: 'hover:border-emerald-500/40 hover:bg-emerald-500/10' },
-          ].map(({ step, title, desc, icon: Icon, color, border, bg, glow }) => (
-            <div key={step} className={`group relative rounded-2xl border ${border} ${bg} ${glow} p-6 transition-all duration-300 cursor-default`}>
-              {/* Step number background */}
-              <div className="absolute top-4 right-4 text-5xl font-black text-white/[0.03] select-none leading-none">{step}</div>
+          ].map(({ title, desc, icon: Icon, color, border, bg, glow }) => (
+            <div key={title} className={`rounded-2xl border ${border} ${bg} ${glow} p-6 transition-all duration-300`}>
               <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${border} ${bg} mb-4`}>
                 <Icon className={`h-5 w-5 ${color}`} />
               </div>
-              <p className={`text-[11px] font-bold font-mono ${color} mb-1`}>STEP {step}</p>
               <h3 className="font-bold text-sm text-white mb-2">{title}</h3>
               <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
             </div>
@@ -171,69 +159,35 @@ export default function Home() {
         </div>
 
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden backdrop-blur-sm">
-          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-3">
-            <div className="flex gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-red-500/70" />
-              <div className="h-3 w-3 rounded-full bg-amber-500/70" />
-              <div className="h-3 w-3 rounded-full bg-emerald-500/70" />
-            </div>
-            <span className="text-xs text-slate-500 font-mono">riskos-demo.sh</span>
-          </div>
           <div className="divide-y divide-white/[0.04]">
             {[
-              { n: '01', text: 'Open /dashboard — 3 pre-seeded risk cases are already waiting', tag: 'START' },
-              { n: '02', text: 'Click 🔴 Critical Risk to inject a ₹1,85,000 Tor-origin payment', tag: 'SIMULATE' },
-              { n: '03', text: 'Watch it auto-block instantly (score ≥ 85) — no human action needed', tag: 'AUTO-BLOCK' },
-              { n: '04', text: 'Click the case → AI Investigation tab shows Gemini\'s full analysis', tag: 'AI' },
-              { n: '05', text: 'Go to Signal Breakdown → see all 6 weighted risk factors explained', tag: 'XAI' },
-              { n: '06', text: 'Go to Ask AI tab → type "Why was this blocked?" for a live AI answer', tag: 'CHAT' },
-              { n: '07', text: 'Check Audit Trail → auto-block + refund permanently recorded', tag: 'AUDIT' },
-            ].map(({ n, text, tag }) => (
+              { n: '1', text: 'Open /dashboard — 3 pre-seeded risk cases are already waiting' },
+              { n: '2', text: 'Click 🔴 Suspicious Payment to inject a ₹1,85,000 Tor-origin payment' },
+              { n: '3', text: 'Watch it auto-block instantly — no human action needed' },
+              { n: '4', text: 'Click the case → AI Summary tab shows Gemini\'s full investigation' },
+              { n: '5', text: 'Go to Why Flagged? tab → see all 6 weighted risk factors' },
+              { n: '6', text: 'Go to Ask AI tab → type "Why was this blocked?" for a live answer' },
+              { n: '7', text: 'Check History tab → auto-block + refund permanently recorded' },
+            ].map(({ n, text }) => (
               <div key={n} className="flex items-center gap-4 px-6 py-4 hover:bg-white/[0.02] transition">
-                <span className="text-xs font-mono text-indigo-500 font-bold w-6 flex-shrink-0">{n}</span>
-                <span className="text-sm text-slate-300 flex-1">{text}</span>
-                <span className="hidden sm:inline text-[10px] font-mono font-bold text-slate-600 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded flex-shrink-0">{tag}</span>
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/20 border border-indigo-500/30 text-xs font-bold text-indigo-400">{n}</span>
+                <span className="text-sm text-slate-300">{text}</span>
               </div>
             ))}
           </div>
-          <div className="p-5 border-t border-white/[0.06] bg-white/[0.02]">
+          <div className="p-5 border-t border-white/[0.06]">
             <Link
               href="/dashboard"
               className="group flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-6 py-3 text-sm font-bold text-white shadow-xl shadow-indigo-600/25 transition-all hover:shadow-indigo-500/40 w-full"
             >
               <LayoutDashboard className="h-4 w-4" />
-              Open Command Center
+              Open Dashboard
               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Tech Stack ────────────────────────────────────────────────────── */}
-      <section className="px-6 py-12 border-t border-white/[0.06]">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-[11px] text-slate-600 uppercase tracking-widest font-semibold mb-6">Built With</p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {[
-              { label: 'Next.js 16', color: 'text-slate-300' },
-              { label: 'TypeScript 5', color: 'text-blue-400' },
-              { label: 'Google Gemini 1.5 Flash', color: 'text-violet-400' },
-              { label: 'Razorpay API', color: 'text-indigo-400' },
-              { label: 'Supabase Realtime', color: 'text-emerald-400' },
-              { label: 'Tailwind CSS 4', color: 'text-cyan-400' },
-            ].map(({ label, color }) => (
-              <span key={label} className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/[0.08] bg-white/[0.03] text-xs font-semibold text-slate-400 hover:bg-white/[0.06] transition">
-                <span className={`h-1.5 w-1.5 rounded-full bg-current ${color}`} />
-                <span className={color}>{label}</span>
-              </span>
-            ))}
-          </div>
-          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-600">
-            <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-            Zero setup required — works with in-memory store, no DB or API keys needed to demo
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

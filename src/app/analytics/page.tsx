@@ -95,12 +95,8 @@ export default function AnalyticsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black font-mono text-white">
-              RISK<span className="text-indigo-400">OS</span>
-              <span className="text-slate-600"> //</span>
-              <span className="text-slate-300"> Analytics</span>
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">Fraud trends, risk patterns, and operational metrics</p>
+            <h1 className="text-xl font-black font-mono text-white">Analytics</h1>
+          <p className="text-sm text-slate-500 mt-1">Fraud trends, risk patterns, and operational metrics</p>
           </div>
           <button onClick={fetchData} disabled={loading}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.08] bg-white/[0.03] text-xs text-slate-400 hover:text-white hover:bg-white/[0.06] transition">
@@ -146,23 +142,21 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex items-end gap-2 h-32">
                   {data.daily_trend.map((day, i) => {
-                    const h = maxDailyCase > 0 ? (day.cases / maxDailyCase) * 100 : 0;
+                    const h  = maxDailyCase > 0 ? (day.cases   / maxDailyCase) * 100 : 0;
                     const bh = maxDailyCase > 0 ? (day.blocked / maxDailyCase) * 100 : 0;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
+                      <div
+                        key={i}
+                        className="flex-1 flex flex-col items-center gap-1"
+                        title={`${day.date}: ${day.cases} cases, ${day.blocked} blocked`}
+                      >
                         <div className="w-full flex flex-col justify-end gap-0.5" style={{ height: '96px' }}>
-                          {/* Blocked portion */}
-                          <div className="w-full bg-red-500/70 rounded-t transition-all duration-700 group-hover:bg-red-500"
+                          <div className="w-full bg-red-500/70 rounded-t transition-all duration-700 hover:bg-red-500"
                             style={{ height: `${bh}%`, minHeight: day.blocked > 0 ? '3px' : '0' }} />
-                          {/* Remaining cases */}
-                          <div className="w-full bg-indigo-500/40 rounded-t transition-all duration-700 group-hover:bg-indigo-500/60"
+                          <div className="w-full bg-indigo-500/40 rounded-t transition-all duration-700 hover:bg-indigo-500/60"
                             style={{ height: `${Math.max(h - bh, 0)}%`, minHeight: day.cases > day.blocked ? '3px' : '0' }} />
                         </div>
                         <p className="text-[9px] text-slate-600 whitespace-nowrap">{day.date}</p>
-                        {/* Tooltip on hover */}
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-800 border border-white/[0.1] rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none">
-                          {day.cases} cases · {day.blocked} blocked
-                        </div>
                       </div>
                     );
                   })}
@@ -307,16 +301,18 @@ export default function AnalyticsPage() {
                   <div className="flex items-start gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <span className="text-red-400 font-bold flex-shrink-0">→</span>
                     <span>{data.severity_breakdown.critical > 0
-                      ? `${data.severity_breakdown.critical} critical-risk payment${data.severity_breakdown.critical > 1 ? 's' : ''} detected — immediate review needed`
-                      : 'No critical-risk payments detected — system operating normally'}</span>
+                      ? `${data.severity_breakdown.critical} critical-risk payment${data.severity_breakdown.critical > 1 ? 's' : ''} detected — review these first`
+                      : 'No critical-risk payments — system is operating normally'}</span>
                   </div>
                   <div className="flex items-start gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <span className="text-emerald-400 font-bold flex-shrink-0">→</span>
-                    <span>{fmt(data.summary.amount_blocked)} in fraudulent payments blocked from processing</span>
+                    <span>{fmt(data.summary.amount_blocked)} in potentially fraudulent payments blocked from processing</span>
                   </div>
                   <div className="flex items-start gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
                     <span className="text-amber-400 font-bold flex-shrink-0">→</span>
-                    <span>Fraud rate is {data.summary.fraud_rate}% — industry average is 0.5–2%</span>
+                    <span>{data.status_breakdown.new > 0
+                      ? `${data.status_breakdown.new} case${data.status_breakdown.new > 1 ? 's' : ''} pending analyst review`
+                      : 'No pending cases — all caught up'}</span>
                   </div>
                 </div>
               </div>

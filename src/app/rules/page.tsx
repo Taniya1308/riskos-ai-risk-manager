@@ -44,6 +44,16 @@ function Tooltip({ text }: { text: string }) {
 
 function SliderInput({ label, value, min, max, step = 1, onChange, tooltip, unit = '' }:
   { label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void; tooltip?: string; unit?: string }) {
+
+  const fmt = (n: number) => {
+    if (unit === '₹') {
+      if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+      if (n >= 1000)   return `₹${(n / 1000).toFixed(0)}K`;
+      return `₹${n}`;
+    }
+    return `${n}${unit}`;
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -51,7 +61,7 @@ function SliderInput({ label, value, min, max, step = 1, onChange, tooltip, unit
           <label className="text-xs font-semibold text-slate-300">{label}</label>
           {tooltip && <Tooltip text={tooltip} />}
         </div>
-        <span className="text-sm font-black text-indigo-400">{value}{unit}</span>
+        <span className="text-sm font-black text-indigo-400">{fmt(value)}</span>
       </div>
       <input
         type="range"
@@ -61,7 +71,7 @@ function SliderInput({ label, value, min, max, step = 1, onChange, tooltip, unit
         style={{ background: `linear-gradient(to right, rgb(99 102 241) 0%, rgb(99 102 241) ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.08) ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.08) 100%)` }}
       />
       <div className="flex justify-between text-[10px] text-slate-600">
-        <span>{min}{unit}</span><span>{max}{unit}</span>
+        <span>{fmt(min)}</span><span>{fmt(max)}</span>
       </div>
     </div>
   );
@@ -73,6 +83,7 @@ export default function RulesPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [newRule, setNewRule]   = useState({ name: '', condition: 'score_above', value: '70', action: 'notify' });
   const [showNewRule, setShowNewRule] = useState(false);
 
@@ -91,6 +102,9 @@ export default function RulesPage() {
 
   async function saveConfig() {
     if (!config) return;
+    setSaveAttempted(true);
+    const totalWeight = Object.values(config.signal_weights).reduce((a, b) => a + b, 0);
+    if (totalWeight !== 100 || config.auto_block_threshold <= config.case_creation_threshold) return;
     setSaving(true);
     try {
       await fetch('/api/rules', {
@@ -160,19 +174,15 @@ export default function RulesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black font-mono text-white">
-              RISK<span className="text-indigo-400">OS</span>
-              <span className="text-slate-600"> //</span>
-              <span className="text-slate-300"> Rule Engine</span>
-            </h1>
+            <h1 className="text-xl font-black font-mono text-white">Risk Rules</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Configure risk thresholds, signal weights, and alert rules — no code needed
+              Configure thresholds, signal weights, and alert rules
             </p>
           </div>
           <div className="flex items-center gap-3">
             {config.updated_at && (
               <p className="text-[11px] text-slate-600 hidden sm:block">
-                Last updated by <span className="text-slate-400">{config.updated_by}</span>
+                Last saved {new Date(config.updated_at).toLocaleTimeString()}
               </p>
             )}
             <button onClick={saveConfig} disabled={saving}
@@ -210,7 +220,7 @@ export default function RulesPage() {
             tooltip="Payments scoring above this create a case in the queue for analyst review"
           />
 
-          {config.auto_block_threshold <= config.case_creation_threshold && (
+          {config.auto_block_threshold <= config.case_creation_threshold && saveAttempted && (
             <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-400">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               Auto-block threshold must be higher than case creation threshold
@@ -249,10 +259,10 @@ export default function RulesPage() {
             />
           ))}
 
-          {totalWeight !== 100 && (
+          {totalWeight !== 100 && saveAttempted && (
             <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-400">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              Weights should add up to 100%. Currently at {totalWeight}%.
+              Weights must add up to 100%. Currently at {totalWeight}%.
             </div>
           )}
         </div>

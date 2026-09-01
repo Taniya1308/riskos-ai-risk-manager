@@ -210,12 +210,17 @@ export default function RiskDetailsModal({
     loadData();
   }, [caseData, isOpen]);
 
+  // Close on Escape key
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    if (isOpen) window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
-
-  if (!isOpen || !caseData) return null;
 
   const txn = (caseData.transactions as Record<string, unknown>) || {};
   const score = (caseData.risk_scores as Record<string, unknown>) || {};
@@ -272,7 +277,8 @@ export default function RiskDetailsModal({
   ] as const;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="h-full w-full max-w-2xl bg-slate-900 border-l border-slate-800 text-slate-100 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -293,10 +299,7 @@ export default function RiskDetailsModal({
                     caseData.status === 'escalated'? 'bg-purple-950 text-purple-400 border-purple-800' :
                     'bg-amber-950 text-amber-400 border-amber-800'
                   }`}>
-                    {(caseData.status as string) || 'new'}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${severityColors.badge}`}>
-                    {severity}
+                    {(caseData.status as string) || 'pending'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 font-mono mt-0.5">
@@ -358,7 +361,7 @@ export default function RiskDetailsModal({
               {loadingLogs ? (
                 <div className="flex items-center gap-2 text-slate-400 text-sm">
                   <div className="h-4 w-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-                  Running AI investigation…
+                  Loading investigation…
                 </div>
               ) : aiInvestigation ? (
                 <>
@@ -544,7 +547,7 @@ export default function RiskDetailsModal({
             <div className="p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold flex items-center gap-2">
-                  <Lock className="h-3.5 w-3.5" /> Immutable Audit Trail
+                  <Lock className="h-3.5 w-3.5" /> Audit Trail
                 </p>
                 <span className="text-xs text-slate-500">{auditLogs.length} entries</span>
               </div>
@@ -728,7 +731,6 @@ export default function RiskDetailsModal({
               >
                 <AlertTriangle className="h-4 w-4" />
                 <span>Escalate</span>
-                <span className="text-[9px] opacity-60 font-normal">Send to senior</span>
               </button>
               <button
                 onClick={() => handleAction('blocked')}
@@ -737,7 +739,6 @@ export default function RiskDetailsModal({
               >
                 <XCircle className="h-4 w-4" />
                 <span>Block + Refund</span>
-                <span className="text-[9px] opacity-60 font-normal">Stop & refund</span>
               </button>
               <button
                 onClick={() => handleAction('approved')}
@@ -746,7 +747,6 @@ export default function RiskDetailsModal({
               >
                 <CheckCircle2 className="h-4 w-4" />
                 <span>Approve</span>
-                <span className="text-[9px] opacity-60 font-normal">Looks safe</span>
               </button>
             </div>
           </div>
