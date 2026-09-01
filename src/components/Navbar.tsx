@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ShieldAlert, LayoutDashboard, Home, ExternalLink, AlertTriangle, GitBranch } from 'lucide-react';
+import { ShieldAlert, LayoutDashboard, Home, ExternalLink, AlertTriangle, GitBranch, BarChart3, Settings } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -30,8 +30,10 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { href: '/',          label: 'Overview',        icon: Home },
-    { href: '/dashboard', label: 'Command Center',  icon: LayoutDashboard },
+    { href: '/',           label: 'Overview',       icon: Home },
+    { href: '/dashboard',  label: 'Command Center', icon: LayoutDashboard },
+    { href: '/analytics',  label: 'Analytics',      icon: BarChart3 },
+    { href: '/rules',      label: 'Rules',          icon: Settings },
   ];
 
   return (

@@ -5,9 +5,12 @@ import { supabase } from '@/lib/supabase';
 import {
   ShieldAlert, Activity, CheckCircle, AlertTriangle, RefreshCw,
   Zap, Sparkles, XCircle, TrendingUp, Bot, Clock, ChevronRight,
-  Database, DollarSign, Lock, X, Shield,
+  Database, DollarSign, Lock, X, Shield, Search, Filter,
+  Download, CheckSquare, Square, BarChart3, Settings,
 } from 'lucide-react';
 import RiskDetailsModal from '@/components/RiskDetailsModal';
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 interface RiskCase {
   id: string;
@@ -46,14 +49,16 @@ interface Stats {
 }
 
 interface ServiceStatus { status: 'ok' | 'degraded' | 'offline'; message: string; }
-interface HealthData { status: 'ok' | 'degraded' | 'offline'; services: Record<string, ServiceStatus>; }
-interface Toast { id: string; type: 'critical' | 'info' | 'success' | 'warning'; title: string; message: string; }
+interface HealthData   { status: 'ok' | 'degraded' | 'offline'; services: Record<string, ServiceStatus>; }
+interface Toast        { id: string; type: 'critical' | 'info' | 'success' | 'warning'; title: string; message: string; }
 
-const SEV: Record<string, { dot: string; bar: string; badge: string; text: string }> = {
-  critical: { dot: 'bg-red-500',     bar: 'bg-red-500',     badge: 'bg-red-500/10 text-red-400 border-red-500/25',     text: 'text-red-400' },
-  high:     { dot: 'bg-orange-500',  bar: 'bg-orange-500',  badge: 'bg-orange-500/10 text-orange-400 border-orange-500/25', text: 'text-orange-400' },
-  medium:   { dot: 'bg-yellow-500',  bar: 'bg-yellow-500',  badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/25', text: 'text-yellow-400' },
-  low:      { dot: 'bg-emerald-500', bar: 'bg-emerald-500', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25', text: 'text-emerald-400' },
+// ── Style maps ─────────────────────────────────────────────────────────────
+
+const SEV: Record<string, { dot: string; badge: string }> = {
+  critical: { dot: 'bg-red-500',     badge: 'bg-red-500/10 text-red-400 border-red-500/25' },
+  high:     { dot: 'bg-orange-500',  badge: 'bg-orange-500/10 text-orange-400 border-orange-500/25' },
+  medium:   { dot: 'bg-yellow-500',  badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/25' },
+  low:      { dot: 'bg-emerald-500', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' },
 };
 
 const STATUS: Record<string, string> = {
@@ -66,32 +71,27 @@ const STATUS: Record<string, string> = {
 const SVC_DOT   = { ok: 'bg-emerald-400', degraded: 'bg-amber-400', offline: 'bg-red-400' };
 const SVC_COLOR = { ok: 'text-emerald-400', degraded: 'text-amber-400', offline: 'text-red-400' };
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
 function timeAgo(d: string) {
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
 }
 
 function fmt(n: number) {
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
+  if (n >= 1000)   return `₹${(n / 1000).toFixed(0)}K`;
   return `₹${n}`;
 }
 
-function scoreColor(s: number) {
-  if (s >= 80) return 'text-red-400';
-  if (s >= 60) return 'text-orange-400';
-  if (s >= 40) return 'text-yellow-400';
-  return 'text-emerald-400';
-}
+// ── Mini score ring ────────────────────────────────────────────────────────
 
-// Mini circular score
 function ScoreBadge({ score }: { score: number }) {
   const c = score >= 80 ? '#f87171' : score >= 60 ? '#fb923c' : score >= 40 ? '#facc15' : '#34d399';
-  const r = 14, circ = 2 * Math.PI * r;
+  const r = 14; const circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
   return (
     <div className="relative flex items-center justify-center w-9 h-9 flex-shrink-0">
@@ -106,7 +106,8 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-// Toast
+// ── Toast ──────────────────────────────────────────────────────────────────
+
 function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: string) => void }) {
   if (!toasts.length) return null;
   return (
@@ -137,19 +138,30 @@ function Toasts({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: string) =>
   );
 }
 
+// ── Dashboard ──────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
-  const [cases, setCases] = useState<RiskCase[]>([]);
-  const [selected, setSelected] = useState<RiskCase | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [simulating, setSimulating] = useState(false);
-  const [simType, setSimType] = useState<string | null>(null);
-  const [source, setSource] = useState<'supabase' | 'mock'>('mock');
-  const [refreshed, setRefreshed] = useState(new Date());
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [cases,       setCases]       = useState<RiskCase[]>([]);
+  const [selected,    setSelected]    = useState<RiskCase | null>(null);
+  const [modalOpen,   setModalOpen]   = useState(false);
+  const [loading,     setLoading]     = useState(true);
+  const [simulating,  setSimulating]  = useState(false);
+  const [simType,     setSimType]     = useState<string | null>(null);
+  const [source,      setSource]      = useState<'supabase' | 'mock'>('mock');
+  const [refreshed,   setRefreshed]   = useState(new Date());
+  const [stats,       setStats]       = useState<Stats | null>(null);
+  const [health,      setHealth]      = useState<HealthData | null>(null);
+  const [toasts,      setToasts]      = useState<Toast[]>([]);
   const prevCount = useRef(0);
+
+  // Search / Filter / Bulk
+  const [search,         setSearch]         = useState('');
+  const [filterStatus,   setFilterStatus]   = useState('all');
+  const [filterSeverity, setFilterSeverity] = useState('all');
+  const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set());
+  const [bulkLoading,    setBulkLoading]    = useState(false);
+
+  // ── Helpers ──────────────────────────────────────────────────────────
 
   const toast = useCallback((t: Omit<Toast, 'id'>) => {
     const id = `t_${Date.now()}`;
@@ -178,27 +190,32 @@ export default function Dashboard() {
           const c = d.cases[0];
           const s = c?.risk_scores?.score || 0;
           if (c?.status === 'blocked' && s >= 85) {
-            toast({ type: 'critical', title: '🚨 Auto-Blocked: Critical Risk', message: `${c.transactions?.razorpay_payment_id?.slice(0,18) || c.id.slice(0,8)} scored ${s}/100 — blocked & refunded automatically.` });
+            toast({ type: 'critical', title: '🚨 Auto-Blocked: Critical Risk', message: `${c.transactions?.razorpay_payment_id?.slice(0, 18) || c.id.slice(0, 8)} scored ${s}/100 — blocked & refunded automatically.` });
           } else if (s >= 60) {
             toast({ type: 'warning', title: '⚠️ New High-Risk Case', message: `Score ${s}/100 (${c.risk_scores?.severity}) — requires analyst review.` });
           }
         }
         prevCount.current = d.cases.length;
       }
-    } catch { } finally { setLoading(false); }
+    } catch {} finally { setLoading(false); }
   }, [toast]);
 
   useEffect(() => {
     fetchCases(false); fetchStats(); fetchHealth();
     let ch: ReturnType<typeof supabase.channel> | undefined;
     try {
-      ch = supabase.channel('rt').on('postgres_changes', { event: '*', schema: 'public', table: 'risk_cases' }, () => { fetchCases(true); fetchStats(); }).subscribe();
+      ch = supabase.channel('rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'risk_cases' }, () => { fetchCases(true); fetchStats(); })
+        .subscribe();
     } catch {}
     return () => { if (ch) supabase.removeChannel(ch); };
   }, [fetchCases, fetchStats]);
 
   async function handleDecision(caseId: string, decision: 'approved' | 'blocked' | 'escalated') {
-    const r = await fetch('/api/cases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caseId, decision, actor: 'Analyst_Current' }) });
+    const r = await fetch('/api/cases', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caseId, decision, actor: 'Analyst_Current' }),
+    });
     const d = await r.json();
     if (decision === 'blocked' && d.refund) {
       toast(d.refund.success
@@ -212,9 +229,9 @@ export default function Dashboard() {
     setSimulating(true); setSimType(type);
     const cfgs = {
       high_risk:   { event: 'payment.authorized', amount: 18500000, device_id: 'dev_fingerprint_anomaly_tor_exit', location_id: 'IN_MUMBAI_HIGH_RISK_TOR', customer_id: 'cust_anon_demo' },
-      medium_risk: { event: 'payment.authorized', amount: 7500000,  device_id: 'device_unknown',                  location_id: 'IN_DELHI_VPN',              customer_id: 'cust_judge_demo' },
-      low_risk:    { event: 'payment.captured',   amount: 1200000,  device_id: 'dev_chrome_android_v14',          location_id: 'IN_BANGALORE',              customer_id: 'cust_regular_456' },
-      failed:      { event: 'payment.failed',     amount: 4500000,  device_id: 'device_unknown',                  location_id: 'unknown',                   customer_id: 'cust_anonymous' },
+      medium_risk: { event: 'payment.authorized', amount: 7500000,  device_id: 'device_unknown',                  location_id: 'IN_DELHI_VPN',             customer_id: 'cust_judge_demo' },
+      low_risk:    { event: 'payment.captured',   amount: 1200000,  device_id: 'dev_chrome_android_v14',          location_id: 'IN_BANGALORE',             customer_id: 'cust_regular_456' },
+      failed:      { event: 'payment.failed',     amount: 4500000,  device_id: 'device_unknown',                  location_id: 'unknown',                  customer_id: 'cust_anonymous' },
     };
     const cfg = cfgs[type];
     try {
@@ -227,15 +244,57 @@ export default function Dashboard() {
     finally { setSimulating(false); setSimType(null); }
   }
 
-  const pending   = cases.filter(c => !c.status || c.status === 'new').length;
-  const critical  = cases.filter(c => c.risk_scores?.severity === 'critical').length;
-  const blocked   = cases.filter(c => c.status === 'blocked').length;
-  const approved  = cases.filter(c => c.status === 'approved').length;
-  const avg       = cases.length ? Math.round(cases.reduce((s, c) => s + (c.risk_scores?.score || 0), 0) / cases.length) : 0;
+  // Filtered cases
+  const filteredCases = cases.filter(c => {
+    const t = c.transactions;
+    const q = search.toLowerCase();
+    const matchSearch = !search ||
+      t?.razorpay_payment_id?.toLowerCase().includes(q) ||
+      t?.customer_id?.toLowerCase().includes(q) ||
+      t?.location_id?.toLowerCase().includes(q);
+    const matchStatus   = filterStatus   === 'all' || (c.status || 'new') === filterStatus;
+    const matchSeverity = filterSeverity === 'all' || c.risk_scores?.severity === filterSeverity;
+    return matchSearch && matchStatus && matchSeverity;
+  });
+
+  async function handleBulkAction(decision: 'approved' | 'blocked' | 'escalated') {
+    if (!selectedIds.size) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch('/api/cases/bulk', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseIds: Array.from(selectedIds), decision, actor: 'Analyst_Current' }),
+      });
+      const d = await res.json();
+      toast({ type: 'success', title: `✅ Bulk ${decision}`, message: `${d.processed} payment${d.processed !== 1 ? 's' : ''} ${decision}.` });
+      setSelectedIds(new Set()); await fetchCases(false); await fetchStats();
+    } catch { toast({ type: 'warning', title: 'Bulk action failed', message: 'Please try again.' }); }
+    finally { setBulkLoading(false); }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function toggleSelectAll() {
+    setSelectedIds(selectedIds.size === filteredCases.length ? new Set() : new Set(filteredCases.map(c => c.id)));
+  }
+  function handleExport() {
+    const p = new URLSearchParams();
+    if (filterStatus   !== 'all') p.set('status',   filterStatus);
+    if (filterSeverity !== 'all') p.set('severity', filterSeverity);
+    window.open(`/api/cases/export?${p.toString()}`, '_blank');
+  }
+
+  // Derived counts
+  const pending  = cases.filter(c => !c.status || c.status === 'new').length;
+  const critical = cases.filter(c => c.risk_scores?.severity === 'critical').length;
+  const blocked  = cases.filter(c => c.status === 'blocked').length;
+  const approved = cases.filter(c => c.status === 'approved').length;
+  const avg      = cases.length ? Math.round(cases.reduce((s, c) => s + (c.risk_scores?.score || 0), 0) / cases.length) : 0;
 
   return (
     <div className="min-h-screen text-slate-100 font-sans">
-      {/* Background */}
+      {/* Background orbs */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute top-0 left-1/3 w-[600px] h-[400px] bg-indigo-600/[0.04] rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[400px] bg-violet-600/[0.04] rounded-full blur-3xl" />
@@ -243,7 +302,7 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-5">
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* ── Page Header ─────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
@@ -258,19 +317,24 @@ export default function Dashboard() {
                 {source === 'supabase' ? 'Supabase Realtime' : 'In-Memory'}
               </span>
             </div>
-            <p className="text-sm text-slate-500 mt-1">AI-powered fraud detection for Razorpay payments · auto-blocks threats · issues refunds automatically</p>
+            <p className="text-sm text-slate-500 mt-1">
+              AI-powered fraud detection for Razorpay payments · auto-blocks threats · issues refunds automatically
+            </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <Clock className="h-3.5 w-3.5" />
             {timeAgo(refreshed.toISOString())}
-            <button onClick={() => { fetchCases(false); fetchStats(); }} disabled={loading}
-              className="ml-1 p-1.5 rounded-lg hover:bg-white/[0.05] transition text-slate-500 hover:text-slate-300">
+            <button
+              onClick={() => { fetchCases(false); fetchStats(); }}
+              disabled={loading}
+              className="ml-1 p-1.5 rounded-lg hover:bg-white/[0.05] transition text-slate-500 hover:text-slate-300"
+            >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
 
-        {/* ── Welcome Banner (shown when cases exist) ─────────────────────── */}
+        {/* ── How-to guide (shown when cases exist) ───────────────────────── */}
         {!loading && cases.length > 0 && (
           <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/[0.04] px-5 py-4 flex items-start gap-4 backdrop-blur-sm">
             <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 border border-indigo-500/30 mt-0.5">
@@ -291,12 +355,14 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* ── System Health ────────────────────────────────────────────────── */}
         {health && (
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-3 flex items-center flex-wrap gap-4 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${SVC_DOT[health.status]}`} />
               <span className={`text-xs font-bold ${SVC_COLOR[health.status]}`}>
-                {health.status === 'ok' ? 'All Systems Operational' : health.status === 'degraded' ? 'Degraded' : 'Offline'}
+                {health.status === 'ok' ? 'All Systems Operational' : health.status === 'degraded' ? 'Degraded Mode' : 'Offline'}
               </span>
             </div>
             <div className="h-4 w-px bg-white/[0.08]" />
@@ -311,16 +377,15 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── KPI + Stats — single unified row ───────────────────────────── */}
+        {/* ── KPI + Live Stats ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-          {/* Main KPIs — larger */}
           {[
             { label: 'Need Your Review', value: pending,  icon: ShieldAlert,   c: 'text-amber-400',   b: 'border-amber-500/20',   bg: 'bg-amber-500/[0.05]',   desc: 'Waiting for your decision' },
             { label: 'High Risk',        value: critical, icon: AlertTriangle, c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Very suspicious payments' },
             { label: 'Blocked',          value: blocked,  icon: XCircle,       c: 'text-red-300',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.05]',     desc: 'Payments stopped' },
             { label: 'Approved',         value: approved, icon: CheckCircle,   c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.05]', desc: 'Safe, cleared payments' },
           ].map(({ label, value, icon: Icon, c, b, bg, desc }) => (
-            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 space-y-2 backdrop-blur-sm hover:bg-white/[0.04] transition col-span-1`}>
+            <div key={label} className={`rounded-2xl border ${b} ${bg} p-4 space-y-2 backdrop-blur-sm hover:bg-white/[0.04] transition`}>
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-slate-500 font-medium">{label}</p>
                 <Icon className={`h-3.5 w-3.5 ${c}`} />
@@ -329,7 +394,6 @@ export default function Dashboard() {
               <p className="text-[10px] text-slate-600">{desc}</p>
             </div>
           ))}
-          {/* Compact live stats */}
           {stats && [
             { label: 'Money Protected', value: fmt(stats.amount_protected), icon: DollarSign, c: 'text-emerald-400', b: 'border-emerald-500/20', bg: 'bg-emerald-500/[0.04]' },
             { label: 'Auto-Blocked',    value: stats.auto_blocked,           icon: Shield,     c: 'text-red-400',     b: 'border-red-500/20',     bg: 'bg-red-500/[0.04]' },
@@ -342,7 +406,8 @@ export default function Dashboard() {
               </div>
               <p className={`text-2xl font-black ${c}`}>{value}</p>
             </div>
-          ))}</div>
+          ))}
+        </div>
 
         {/* ── Simulator ───────────────────────────────────────────────────── */}
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 backdrop-blur-sm">
@@ -352,18 +417,22 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-200">Try a Live Payment Demo</p>
-              <p className="text-[11px] text-slate-500">Click any button below to simulate a real Razorpay payment and watch RISKOS react instantly</p>
+              <p className="text-[11px] text-slate-500">Click any button to simulate a real Razorpay payment and watch RISKOS react instantly</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {[
-              { type: 'high_risk' as const,   label: '🔴 Suspicious Payment  ₹1,85,000',  sub: 'watch it auto-block',   c: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/50' },
-              { type: 'medium_risk' as const, label: '🟠 High Risk Payment  ₹75,000',      sub: 'needs your review',      c: 'border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/50' },
-              { type: 'failed' as const,      label: '⚠️ Failed Payment  ₹45,000',         sub: 'fraud signal',           c: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500/50' },
-              { type: 'low_risk' as const,    label: '🟢 Normal Payment  ₹12,000',         sub: 'safe, will approve',     c: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50' },
+              { type: 'high_risk'   as const, label: '🔴 Suspicious Payment  ₹1,85,000', sub: 'watch it auto-block',  c: 'border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20' },
+              { type: 'medium_risk' as const, label: '🟠 High Risk Payment  ₹75,000',    sub: 'needs your review',    c: 'border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20' },
+              { type: 'failed'      as const, label: '⚠️ Failed Payment  ₹45,000',       sub: 'fraud signal',         c: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20' },
+              { type: 'low_risk'    as const, label: '🟢 Normal Payment  ₹12,000',       sub: 'safe, will approve',   c: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' },
             ].map(({ type, label, sub, c }) => (
-              <button key={type} onClick={() => simulate(type)} disabled={simulating}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${c}`}>
+              <button
+                key={type}
+                onClick={() => simulate(type)}
+                disabled={simulating}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all disabled:opacity-40 ${c}`}
+              >
                 {simulating && simType === type
                   ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                   : <Sparkles className="h-3.5 w-3.5" />}
@@ -373,78 +442,189 @@ export default function Dashboard() {
             ))}
           </div>
           <p className="text-[11px] text-slate-600 mt-3">
-            💡 The red button simulates a payment from a Tor exit node — RISKOS will block it and issue a refund automatically, no action needed from you.
+            💡 The red button simulates a payment from a Tor exit node — RISKOS will block it and issue a refund automatically.
           </p>
         </div>
 
         {/* ── Case Queue ──────────────────────────────────────────────────── */}
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden backdrop-blur-sm">
-          {/* Queue header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/15 border border-indigo-500/25">
-                <Activity className="h-4 w-4 text-indigo-400" />
+
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-white/[0.06] space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/15 border border-indigo-500/25">
+                  <Activity className="h-4 w-4 text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-200">Flagged Payments</p>
+                  <p className="text-[11px] text-slate-500">
+                    {filteredCases.length} of {cases.length} shown · click any row to investigate
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-200">Flagged Payments</p>
-                <p className="text-[11px] text-slate-500">{cases.length} payments reviewed · click any row to investigate</p>
+              <div className="flex items-center gap-2">
+                {pending > 0 && (
+                  <div className="hidden sm:flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="text-xs font-bold text-amber-400">{pending} pending</span>
+                  </div>
+                )}
+                <button
+                  onClick={handleExport}
+                  title="Download as CSV"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.06] text-xs font-semibold transition"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                </button>
               </div>
             </div>
-            {pending > 0 && (
-              <div className="flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-xs font-bold text-amber-400">{pending} pending</span>
+
+            {/* Search + Filter */}
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-[200px] bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2">
+                <Search className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search by payment ID, customer, location…"
+                  className="bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none w-full"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="text-slate-600 hover:text-slate-400 transition">
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-slate-500" />
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="all">All Status</option>
+                  <option value="new">Pending</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="approved">Approved</option>
+                  <option value="escalated">Escalated</option>
+                </select>
+                <select
+                  value={filterSeverity}
+                  onChange={e => setFilterSeverity(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="all">All Risk</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Bulk action bar */}
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] flex-wrap">
+                <span className="text-xs font-bold text-indigo-400">{selectedIds.size} selected</span>
+                <div className="flex items-center gap-2 ml-auto flex-wrap">
+                  <button onClick={() => handleBulkAction('approved')} disabled={bulkLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold transition disabled:opacity-50">
+                    <CheckCircle className="h-3.5 w-3.5" /> Approve All
+                  </button>
+                  <button onClick={() => handleBulkAction('blocked')} disabled={bulkLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-bold transition disabled:opacity-50">
+                    <XCircle className="h-3.5 w-3.5" /> Block All
+                  </button>
+                  <button onClick={() => handleBulkAction('escalated')} disabled={bulkLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 text-xs font-bold transition disabled:opacity-50">
+                    <AlertTriangle className="h-3.5 w-3.5" /> Escalate All
+                  </button>
+                  <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-600 hover:text-slate-400 transition">
+                    Clear
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
+          {/* Body */}
           {loading ? (
             <div className="flex items-center justify-center gap-3 py-20">
               <div className="h-5 w-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
               <span className="text-sm text-slate-500">Loading risk cases…</span>
             </div>
-          ) : cases.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-4 py-20 px-6 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
-                <ShieldAlert className="h-8 w-8 text-slate-700" />
+          ) : filteredCases.length === 0 ? (
+            cases.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-20 px-6 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
+                  <ShieldAlert className="h-8 w-8 text-slate-700" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-400">No payments reviewed yet</p>
+                  <p className="text-xs text-slate-600 mt-1">Use the demo buttons above to simulate a payment</p>
+                </div>
+                <button onClick={() => simulate('high_risk')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-xs font-bold transition">
+                  <Sparkles className="h-3.5 w-3.5" /> Try a suspicious payment demo
+                </button>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-400">No payments reviewed yet</p>
-                <p className="text-xs text-slate-600 mt-1">Use the demo buttons above to simulate a payment and see RISKOS in action</p>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <Search className="h-8 w-8 text-slate-700" />
+                <p className="text-sm text-slate-500">No results match your filters</p>
+                <button onClick={() => { setSearch(''); setFilterStatus('all'); setFilterSeverity('all'); }}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 transition">
+                  Clear all filters
+                </button>
               </div>
-              <button
-                onClick={() => simulate('high_risk')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-xs font-bold transition"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Try a suspicious payment demo
-              </button>
-            </div>
+            )
           ) : (
             <div className="divide-y divide-white/[0.04]">
-              {cases.map((c, i) => {
-                const txn = c.transactions;
-                const sc  = c.risk_scores;
-                const sev = sc?.severity || 'low';
-                const s   = SEV[sev] || SEV.low;
-                const isPending = !c.status || c.status === 'new';
-                const isAuto    = c.status === 'blocked' && (sc?.score || 0) >= 85;
+              {/* Select all */}
+              {filteredCases.length > 1 && (
+                <div className="flex items-center gap-3 px-5 py-2.5 bg-white/[0.01]">
+                  <button onClick={toggleSelectAll}
+                    className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition">
+                    {selectedIds.size === filteredCases.length
+                      ? <CheckSquare className="h-4 w-4 text-indigo-400" />
+                      : <Square className="h-4 w-4" />}
+                    {selectedIds.size === filteredCases.length ? 'Deselect all' : `Select all ${filteredCases.length}`}
+                  </button>
+                </div>
+              )}
+
+              {filteredCases.map((c, i) => {
+                const txn    = c.transactions;
+                const sc     = c.risk_scores;
+                const sev    = sc?.severity || 'low';
+                const s      = SEV[sev] || SEV.low;
+                const isNew  = !c.status || c.status === 'new';
+                const isAuto = c.status === 'blocked' && (sc?.score || 0) >= 85;
+                const isSel  = selectedIds.has(c.id);
 
                 return (
                   <div
                     key={c.id}
-                    onClick={() => { setSelected(c); setModalOpen(true); }}
-                    className={`group flex items-center gap-4 px-5 py-4 hover:bg-white/[0.03] cursor-pointer transition-all animate-fade-up`}
+                    className={`group flex items-center gap-3 px-5 py-4 transition-all animate-fade-up ${isSel ? 'bg-indigo-500/[0.04]' : 'hover:bg-white/[0.03]'}`}
                     style={{ animationDelay: `${i * 30}ms`, animationFillMode: 'both' }}
                   >
+                    {/* Checkbox */}
+                    <button onClick={() => toggleSelect(c.id)}
+                      className="flex-shrink-0 text-slate-600 hover:text-indigo-400 transition">
+                      {isSel ? <CheckSquare className="h-4 w-4 text-indigo-400" /> : <Square className="h-4 w-4" />}
+                    </button>
+
                     {/* Sev dot */}
-                    <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.dot} ${isPending && sev === 'critical' ? 'animate-pulse shadow-lg shadow-red-500/50' : ''}`} />
+                    <div className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${s.dot} ${isNew && sev === 'critical' ? 'animate-pulse shadow-lg shadow-red-500/50' : ''}`} />
 
                     {/* Score ring */}
                     <ScoreBadge score={sc?.score ?? 0} />
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0 grid sm:grid-cols-2 gap-0.5">
+                    <div className="flex-1 min-w-0 grid sm:grid-cols-2 gap-0.5 cursor-pointer"
+                      onClick={() => { setSelected(c); setModalOpen(true); }}>
                       <div>
                         <p className="text-sm font-bold text-slate-200 font-mono truncate">
                           {txn?.razorpay_payment_id || c.id.slice(0, 18)}
@@ -475,9 +655,11 @@ export default function Dashboard() {
                       </span>
                     </div>
 
-                    <div className="flex-shrink-0 flex items-center gap-2 text-slate-700">
+                    {/* Time + arrow */}
+                    <div className="flex-shrink-0 flex items-center gap-2 text-slate-700 cursor-pointer"
+                      onClick={() => { setSelected(c); setModalOpen(true); }}>
                       <span className="hidden md:inline text-xs">{timeAgo(c.created_at)}</span>
-                      <span className="hidden lg:inline text-[10px] text-slate-700 group-hover:text-indigo-400 transition font-medium">Investigate →</span>
+                      <span className="hidden lg:inline text-[10px] group-hover:text-indigo-400 transition font-medium">Investigate →</span>
                       <ChevronRight className="h-4 w-4 group-hover:text-slate-400 transition" />
                     </div>
                   </div>
@@ -487,9 +669,33 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* bottom padding */}
-        <div className="h-4" />
+        {/* ── Quick Links ──────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <a href="/analytics"
+            className="flex items-center gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] p-4 hover:bg-violet-500/[0.08] transition group">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-violet-500/25 bg-violet-500/15">
+              <BarChart3 className="h-4 w-4 text-violet-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-slate-200">View Analytics</p>
+              <p className="text-[11px] text-slate-500">Fraud trends, top risk locations, score distribution</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-violet-400 transition" />
+          </a>
+          <a href="/rules"
+            className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 hover:bg-amber-500/[0.08] transition group">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/15">
+              <Settings className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-slate-200">Configure Rules</p>
+              <p className="text-[11px] text-slate-500">Set thresholds, signal weights, alert rules</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-amber-400 transition" />
+          </a>
+        </div>
 
+        <div className="h-4" />
       </div>
 
       <RiskDetailsModal
