@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   ShieldAlert, LayoutDashboard, Home, AlertTriangle,
-  GitBranch, BarChart3, Settings, Sparkles,
+  GitBranch, BarChart3, Settings, Sparkles, Target,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -35,6 +35,7 @@ export default function Navbar() {
     { href: '/',          label: 'Overview',       icon: Home },
     { href: '/dashboard', label: 'Command Center', icon: LayoutDashboard },
     { href: '/analytics', label: 'Analytics',      icon: BarChart3 },
+    { href: '/evaluate',  label: 'Evaluation',     icon: Target },
     { href: '/rules',     label: 'Rules',          icon: Settings },
   ];
 

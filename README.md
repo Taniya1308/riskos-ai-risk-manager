@@ -21,6 +21,7 @@ npm install && npm run dev
 |---|---|
 | Command Center | `/dashboard` |
 | Analytics | `/analytics` |
+| **Evaluation (Precision/Recall)** | **`/evaluate`** |
 | Rule Engine | `/rules` |
 
 ---
@@ -104,7 +105,7 @@ RAZORPAY_KEY_SECRET=
 | `POST` | `/api/chat` | AI analyst chat |
 | `GET` | `/api/analytics` | Fraud trend data |
 | `GET/POST` | `/api/rules` | Rule config and alert rules |
-| `GET` | `/api/health` | System status |
+| `GET` | `/api/evaluate?threshold=` | Precision, recall, F1, cost on labeled test set |
 
 ---
 
